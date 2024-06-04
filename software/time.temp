@@ -1,1 +1,104 @@
-a
+#define TUBE_COUNT 6 // Number of 7-segment displays for HH:MM:SS
+#define DISPLAY_MAX (pow(10, TUBE_COUNT) - 1) // Maximum displayable number (999999)
+
+#define PIN_E1 7  // Enable pin for 1st 7-segment display
+#define PIN_E2 8  // Enable pin for 2nd 7-segment display
+#define PIN_E3 9  // Enable pin for 3rd 7-segment display
+#define PIN_E4 10 // Enable pin for 4th 7-segment display
+#define PIN_E5 11 // Enable pin for 5th 7-segment display
+#define PIN_E6 12 // Enable pin for 6th 7-segment display
+
+#define PIN_SA 1 // Segment A pin
+#define PIN_SB 0 // Segment B pin
+#define PIN_SC 2 // Segment C pin
+#define PIN_SD 3 // Segment D pin
+#define PIN_SE 4 // Segment E pin
+#define PIN_SF 5 // Segment F pin
+#define PIN_SG 6 // Segment G pin
+
+char segmentPins[7] = {PIN_SA, PIN_SB, PIN_SC, PIN_SD, PIN_SE, PIN_SF, PIN_SG}; // Array of segment pins
+char enablePins[TUBE_COUNT] = {PIN_E1, PIN_E2, PIN_E3, PIN_E4, PIN_E5, PIN_E6}; // Array of enable pins
+
+unsigned int digitSegments[10] = {
+  0b1111110, // 0
+  0b0110000, // 1
+  0b1101101, // 2
+  0b1111001, // 3
+  0b0110011, // 4
+  0b1011011, // 5
+  0b1011111, // 6
+  0b1110000, // 7
+  0b1111111, // 8
+  0b1111011  // 9
+}; // Segment patterns for digits 0-9
+
+char currentKey = '\0'; // Current key pressed
+long display = 0; // Current number to be displayed
+
+void displayDigit() {
+  static int currentDigit = 0;
+
+  if (--currentDigit < 0) {
+    currentDigit = TUBE_COUNT - 1;
+  }
+
+  long digit = ((long)(display / longPow(10, currentDigit))) % 10;
+  unsigned int segments = digitSegments[digit];
+  char currentTube = enablePins[currentDigit];
+
+  digitalWrite(currentTube, HIGH);
+
+  for (char bit = 6; bit >= 0; --bit) {
+    char enabled = ((segments >> bit) & 1);
+    digitalWrite(segmentPins[6 - bit], enabled);
+  }
+
+  delay(1);
+
+  for (char i = 0; i < 7; i++) {
+    digitalWrite(segmentPins[i], LOW);
+  }
+
+  digitalWrite(currentTube, LOW);
+} // Multiplex the display of digits on the 7-segment displays
+
+void setup() {
+  for (char i = 0; i < TUBE_COUNT; i++) {
+    pinMode(enablePins[i], OUTPUT);
+    digitalWrite(enablePins[i], LOW);
+  }
+
+  for (char i = 0; i < 7; i++) {
+    pinMode(segmentPins[i], OUTPUT);
+    digitalWrite(segmentPins[i], LOW);
+  }
+} // Set up the pins and their initial states
+
+void updateDisplayTime(int hours, int minutes, int seconds) {
+  display = hours * 10000 + minutes * 100 + seconds;
+} // Update the display variable with HHMMSS format
+
+void loop() {
+  static unsigned long lastMillis = 0;
+  static int hours = 0, minutes = 0, seconds = 0;
+
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastMillis >= 1000) {
+    lastMillis = currentMillis;
+    seconds++;
+    if (seconds >= 60) {
+      seconds = 0;
+      minutes++;
+      if (minutes >= 60) {
+        minutes = 0;
+        hours++;
+        if (hours >= 24) {
+          hours = 0;
+        }
+      }
+    }
+    updateDisplayTime(hours, minutes, seconds);
+  }
+
+  displayDigit();
+}
