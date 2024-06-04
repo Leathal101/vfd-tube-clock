@@ -276,7 +276,7 @@ void loop() {
         resetCalculator();
       }
 
-      char number = currentKey - '0';
+      char number = currentKey - 0x30;
 
       if (mathOperator == '\0') {
         if (CAN_ENTER_NUMBER(registerA)) {
@@ -284,4 +284,10 @@ void loop() {
           display = registerA;
         }
       } else {
-        if (CAN_ENTER_NUMBER(register
+        if (CAN_ENTER_NUMBER(registerB)) {
+          registerB = registerB * 10 + number;
+          display = registerB;
+        }
+      }
+  }
+}
